@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>手机灰度阅读测试</title>
+
+  <style>
+    :root {
+      --measurement-height: 120px;
+      --control-bottom: 24px;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: rgb(255, 255, 255);
+      color: black;
+      overflow: hidden;
+    }
+
+    #screen {
+      width: 100vw;
+      height: 100vh;
+      background: rgb(255, 255, 255);
+      color: black;
+      box-sizing: border-box;
+      transition: background 0.05s linear;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #textContainer {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
+      padding: calc(var(--measurement-height) + 24px) 7vw 220px 7vw;
+      background: transparent;
+    }
+
+    #text {
+      max-width: 900px;
+      margin: 0 auto;
+      font-size: 28px;
+      line-height: 1.6;
+      font-weight: normal;
+      color: black;
+      word-break: break-word;
+      white-space: pre-line;
+      text-align: justify;
+      text-align-last: left;
+    }
+
+    #controlPanel {
+      position: fixed;
+      left: 50%;
+      bottom: var(--control-bottom);
+      transform: translateX(-50%);
+
+      width: 90vw;
+      max-width: 650px;
+      padding: 10px 14px 12px 14px;
+      border-radius: 14px;
+      background: rgba(100, 100, 100, 0.6);
+
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      z-index: 999;
+      backdrop-filter: blur(4px);
+    }
+
+    #sliderRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 28px;
+      margin: 0;
+      display: block;
+    }
+    .arrowButton {
+      flex: none;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      font-size: 12px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.92);
+      color: black;
+    }
+    .arrowButton:active {
+      background: rgba(210,210,210,0.95);
+    }
+    
+
+    #grayValue {
+      width: 32px;
+      font-size: 13px;
+      text-align: right;
+      color: white;
+      font-weight: normal;
+      opacity: 0.95;
+    }
+
+    #buttonRow {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: black;
+    }
+
+    button:active {
+      background: rgba(220, 220, 220, 0.95);
+    }
+
+    #setupOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: white;
+      color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 24px;
+    }
+
+    #setupBox {
+      width: 100%;
+      max-width: 420px;
+      box-sizing: border-box;
+      border: 1px solid #cccccc;
+      border-radius: 16px;
+      padding: 22px;
+      background: #f7f7f7;
+    }
+
+    #setupBox h1 {
+      font-size: 22px;
+      margin: 0 0 18px 0;
+      text-align: center;
+    }
+
+    .setupLabel {
+      display: block;
+      font-size: 15px;
+      margin: 14px 0 6px 0;
+    }
+
+    .setupInput {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: 1px solid #aaaaaa;
+    }
+
+    #startButton {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      font-size: 18px;
+      border-radius: 10px;
+      background: black;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="setupOverlay">
+    <div id="setupBox">
+      <h1>灰度阅读调节实验</h1>
+
+      <label class="setupLabel" for="participantInput">被试编码</label>
+      <input
+        id="participantInput"
+        class="setupInput"
+        type="text"
+        placeholder="例如 S001"
+        autocomplete="off"
+      />
+
+      <label class="setupLabel" for="distanceInput">观察距离，单位 cm</label>
+      <input
+        id="distanceInput"
+        class="setupInput"
+        type="number"
+        placeholder="例如 40"
+        min="1"
+        step="0.1"
+      />
+
+      <button id="startButton">开始实验</button>
+    </div>
+  </div>
+
+  <div id="screen">
+    <div id="textContainer">
+      <div id="text">正在加载文本...</div>
+    </div>
+
+    <div id="controlPanel">
+      <div id="sliderRow">
+        <button id="decreaseButton" class="arrowButton">◀</button>
+        <input
+          id="graySlider"
+          type="range"
+          min="0"
+          max="255"
+          value="255"
+          step="1"
+        />
+        <button id="increaseButton" class="arrowButton">▶</button>
+        <div id="grayValue">255</div>
+      </div>
+
+      <div id="buttonRow">
+        <button id="saveButton">下一个</button>
+        <button id="exportButton">导出</button>
+        <button id="clearButton">清空</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // 实验参数
+    // =========================
+
+    // 字号参数：以后需要调整字号时，只修改下面三个数字即可。
+    const FONT_SIZE_SMALL = 13;
+    const FONT_SIZE_MEDIUM = 20;
+    const FONT_SIZE_LARGE = 28;
+
+    // 三个字号，每个字号 4 次
+    const FONT_SIZE_LIST = [
+      FONT_SIZE_SMALL,
+      FONT_SIZE_MEDIUM,
+      FONT_SIZE_LARGE
+    ];
+
+    // 每个字号 2 次从高到低，2 次从低到高
+    const DIRECTIONS_PER_FONT = [
+      "high_to_low",
+      "high_to_low",
+      "high_to_low",
+      "high_to_low",
+      "low_to_high",
+      "low_to_high",
+      "low_to_high",
+      "low_to_high"
+    ];
+
+    // 本组实验呈现的文本：每组实验固定使用一个文件。
+    // 例如这一组写 "text1.txt"，另一组实验可改成 "text2.txt"。
+    // 请把 txt 文件放在 index.html 同一文件夹中。
+    const PRESENTED_TEXT_FILE = "text.txt";
+
+    // =========================
+    // DOM
+    // =========================
+
+    const setupOverlay = document.getElementById("setupOverlay");
+    const participantInput = document.getElementById("participantInput");
+    const distanceInput = document.getElementById("distanceInput");
+    const startButton = document.getElementById("startButton");
+
+    const screen = document.getElementById("screen");
+    const textContainer = document.getElementById("textContainer");
+    const text = document.getElementById("text");
+    const graySlider = document.getElementById("graySlider");
+    const grayValue = document.getElementById("grayValue");
+    const decreaseButton = document.getElementById("decreaseButton");
+    const increaseButton = document.getElementById("increaseButton");
+    const saveButton = document.getElementById("saveButton");
+    const exportButton = document.getElementById("exportButton");
+    const clearButton = document.getElementById("clearButton");
+
+    // =========================
+    // 实验状态
+    // =========================
+
+    let participantId = "";
+    let viewingDistanceCm = "";
+    let trials = [];
+    let currentTrialIndex = 0;
+    let experimentStarted = false;
+    let experimentStartTime = "";
+    let STORAGE_KEY = "";
+
+    async function enterFullscreen(){
+      const element=document.documentElement;
+      try{
+        if(element.requestFullscreen){
+          await element.requestFullscreen();
+        }else if(element.webkitRequestFullscreen){
+          element.webkitRequestFullscreen();
+        }else if(element.msRequestFullscreen){
+          element.msRequestFullscreen();
+        }
+      }catch(error){
+        console.log("全屏失败：",error);
+      }
+    }
+
+    // =========================
+    // 基础功能
+    // =========================
+
+    function setGray(v, area = getCurrentArea()) {
+      v = Number(v);
+
+      const rgb = `rgb(${v}, ${v}, ${v})`;
+
+      // 整个页面共用同一个背景层，顶部留白与正文会在同一帧变化。
+      screen.style.background = rgb;
+      document.body.style.background = rgb;
+
+      grayValue.textContent = v;
+    }
+
+    function getCurrentArea() {
+      return trials[currentTrialIndex]?.area || "text";
+    }
+
+    function setFontSize(fontSizePx) {
+      text.style.fontSize = `${fontSizePx}px`;
+      text.style.color = "black";
+    }
+
+    async function loadText(textFile) {
+      try {
+        const response = await fetch(textFile);
+
+        if (!response.ok) {
+          throw new Error("无法读取文本文件");
+        }
+
+        const content = await response.text();
+        text.textContent = content;
+      } catch (error) {
+        text.textContent =
+          `文本加载失败。请确认 ${textFile} 和 index.html 在同一个文件夹，并且网页是通过本地服务器打开的。`;
+        console.error(error);
+      }
+    }
+
+    function shuffleArray(array) {
+      const arr = array.slice();
+
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+
+      return arr;
+    }
+
+    function createTrials() {
+      const baseTrials = [];
+
+      FONT_SIZE_LIST.forEach(fontSizePx => {
+        DIRECTIONS_PER_FONT.forEach(direction => {
+          baseTrials.push({
+            fontSizePx,
+            direction,
+            startGray: direction === "high_to_low" ? 255 : 0
+          });
+        });
+      });
+
+      // 上下区域共用同一个背景，每个条件只需调节一次。
+      const trialList = shuffleArray(baseTrials).map(trial => ({
+        ...trial,
+        area: "whole_screen",
+        textFile: PRESENTED_TEXT_FILE
+      }));
+
+      return trialList.map((trial, index) => ({
+        ...trial,
+        trialIndex: index + 1
+      }));
+    }
+
+    function getRecords() {
+      if (!STORAGE_KEY) {
+        return [];
+      }
+
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        return [];
+      }
+
+      try {
+        return JSON.parse(saved);
+      } catch (error) {
+        console.error("读取 localStorage 失败：", error);
+        return [];
+      }
+    }
+
+    function setRecords(records) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function createTimestamp() {
+      // 生成精确到分钟的北京时间戳：YYYYMMDDHHMM
+      const parts = new Intl.DateTimeFormat("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(new Date());
+
+      const value = type => parts.find(part => part.type === type)?.value || "";
+
+      return [
+        value("year"),
+        value("month"),
+        value("day"),
+        value("hour"),
+        value("minute")
+      ].join("");
+    }
+
+    // =========================
+    // 试次控制
+    // =========================
+
+    function applyCurrentTrial() {
+      if (currentTrialIndex >= trials.length) {
+        finishExperiment();
+        return;
+      }
+
+      const trial = trials[currentTrialIndex];
+
+      setFontSize(trial.fontSizePx);
+      loadText(trial.textFile);
+      graySlider.value = trial.startGray;
+      setGray(trial.startGray, trial.area);
+
+      textContainer.scrollTop = 0;
+    }
+
+    async function saveCurrentValue() {
+      if (!experimentStarted) {
+        alert("请先填写信息并开始实验");
+        return;
+      }
+
+      if (currentTrialIndex >= trials.length) {
+        alert("实验已结束，可以导出 CSV");
+        return;
+      }
+
+      const records = getRecords();
+      const trial = trials[currentTrialIndex];
+
+      const record = {
+        experimentStartTime: experimentStartTime,
+        participantId: participantId,
+        viewingDistanceCm: viewingDistanceCm,
+        trialIndex: trial.trialIndex,
+        fontSizePx: trial.fontSizePx,
+        startGrayRgb: trial.startGray,
+        responseGrayRgb: Number(graySlider.value),
+        textFile: trial.textFile
+      };
+
+      records.push(record);
+      setRecords(records);
+
+      console.log("当前记录：", record);
+      console.log("全部记录：", records);
+
+      currentTrialIndex += 1;
+
+      if (currentTrialIndex >= trials.length) {
+        finishExperiment();
+      } else {
+        applyCurrentTrial();
+      }
+    }
+
+    function finishExperiment() {
+      saveButton.disabled = true;
+      graySlider.disabled = true;
+
+      const records = getRecords();
+      const averagesByFont = FONT_SIZE_LIST.map(fontSizePx => {
+        const values = records
+          .filter(record => Number(record.fontSizePx) === fontSizePx)
+          .map(record => Number(record.responseGrayRgb))
+          .filter(value => Number.isFinite(value));
+
+        const average = values.length > 0
+          ? values.reduce((sum, value) => sum + value, 0) / values.length
+          : null;
+
+        return `${fontSizePx}px：${average === null ? "无法计算" : average.toFixed(2)}`;
+      });
+
+      alert(
+        `实验结束！\n各字号的平均调整灰度值：\n${averagesByFont.join("\n")}\n请点击“导出”保存 CSV。`
+      );
+    }
+
+    async function startExperiment() {
+      const pid = participantInput.value.trim();
+      const distance = distanceInput.value.trim();
+
+      if (!pid) {
+        alert("请填写被试编码");
+        return;
+      }
+
+      if (!distance) {
+        alert("请填写观察距离");
+        return;
+      }
+
+      participantId = pid;
+      viewingDistanceCm = distance;
+      await enterFullscreen();
+      experimentStartTime = createTimestamp();
+
+      // 每次点击开始实验都会生成一个新的存储 key，避免覆盖旧数据
+      STORAGE_KEY = `brightness_reading_${participantId}_${Date.now()}`;
+
+      trials = createTrials();
+      currentTrialIndex = 0;
+      experimentStarted = true;
+
+      // 存 trial 顺序，方便必要时检查
+      localStorage.setItem(`${STORAGE_KEY}_trialOrder`, JSON.stringify(trials));
+
+      setupOverlay.style.display = "none";
+
+      saveButton.disabled = false;
+      graySlider.disabled = false;
+
+      applyCurrentTrial();
+    }
+
+    // =========================
+    // CSV 导出
+    // =========================
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+
+    function exportCSV() {
+      const records = getRecords();
+
+      if (records.length === 0) {
+        alert("还没有保存数据，无法导出 CSV");
+        return;
+      }
+
+      const header = [
+        "experimentStartTime",
+        "participantId",
+        "viewingDistanceCm",
+        "trialIndex",
+        "fontSizePx",
+        "startGrayRgb",
+        "responseGrayRgb",
+        "textFile"
+      ];
+
+      const rows = records.map(record => [
+        record.experimentStartTime,
+        record.participantId,
+        record.viewingDistanceCm,
+        record.trialIndex,
+        record.fontSizePx,
+        record.startGrayRgb,
+        record.responseGrayRgb,
+        record.textFile
+      ]);
+
+      const csvContent = [
+        header.join(","),
+        ...rows.map(row => row.map(csvEscape).join(","))
+      ].join("\r\n");
+
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8"
+      });
+
+      const url = URL.createObjectURL(blob);
+
+      const safeParticipantId = participantId || "unknown";
+      const safeStartTime = experimentStartTime || createTimestamp();
+
+      const filename = `adjustment_${safeParticipantId}_${safeStartTime}.csv`;
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
+    }
+
+    function clearRecords() {
+      if (!STORAGE_KEY) {
+        alert("当前还没有实验数据");
+        return;
+      }
+
+      const ok = confirm("确定要清空当前实验已保存的数据吗？");
+
+      if (!ok) {
+        return;
+      }
+
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(`${STORAGE_KEY}_trialOrder`);
+      alert("已清空当前实验数据。");
+    }
+
+    // =========================
+    // 事件绑定
+    // =========================
+
+    graySlider.addEventListener("input", function () {
+      setGray(graySlider.value, getCurrentArea());
+    });
+
+    // 左箭头：灰度降低
+    decreaseButton.addEventListener("click", function () {
+
+      let value = Number(graySlider.value);
+
+      value = Math.max(
+        Number(graySlider.min),
+        value - 1
+      );
+
+      graySlider.value = value;
+
+      setGray(value, getCurrentArea());
+
+    });
+
+
+    // 右箭头：灰度增加
+    increaseButton.addEventListener("click", function () {
+
+      let value = Number(graySlider.value);
+
+      value = Math.min(
+        Number(graySlider.max),
+        value + 1
+      );
+
+      graySlider.value = value;
+
+      setGray(value, getCurrentArea());
+
+    });
+
+    saveButton.addEventListener("click", function () {
+      saveCurrentValue();
+    });
+
+    exportButton.addEventListener("click", function () {
+      exportCSV();
+    });
+
+    clearButton.addEventListener("click", function () {
+      clearRecords();
+    });
+
+    startButton.addEventListener("click", function () {
+      startExperiment();
+    });
+
+    // =========================
+    // 初始化
+    // =========================
+
+    saveButton.disabled = true;
+    graySlider.disabled = true;
+
+    setGray(255);
+    loadText(PRESENTED_TEXT_FILE);
+  </script>
+</body>
+</html>

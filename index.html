@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>灰度阅读实验入口</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #171717;
+      --muted: #5f6368;
+      --line: #d7d7d7;
+      --panel: #f7f7f7;
+      --accent: #111111;
+      --page: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: var(--page);
+      color: var(--ink);
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 18px;
+    }
+
+    main {
+      width: min(960px, 100%);
+    }
+
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .experimentGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .experimentLink {
+      display: flex;
+      min-height: 210px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: inherit;
+      text-decoration: none;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .experimentLink:hover,
+    .experimentLink:focus-visible {
+      border-color: var(--accent);
+      background: #ffffff;
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    .experimentContent {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .experimentNumber {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .action {
+      margin-top: auto;
+      padding-top: 20px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        align-items: flex-start;
+      }
+
+      .experimentGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .experimentLink {
+        min-height: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <header>
+      <h1>灰度阅读实验</h1>
+      <p class="subtitle">请选择一个实验进入。每个实验会在新页面中加载对应材料和参数设置。</p>
+    </header>
+
+    <section class="experimentGrid" aria-label="实验列表">
+      <a class="experimentLink" href="display/">
+        <span class="experimentContent">
+          <span class="experimentNumber">1</span>
+          <h2>文本显示</h2>
+          <p class="description">设置灰度值、字体大小，并选择材料 A 或 B 进行阅读显示。</p>
+          <span class="action">进入实验</span>
+        </span>
+      </a>
+
+      <a class="experimentLink" href="adjustment/">
+        <span class="experimentContent">
+          <span class="experimentNumber">2</span>
+          <h2>灰度阅读调节实验</h2>
+          <p class="description">输入被试信息后，通过控制面板调节阅读背景灰度并导出结果。</p>
+          <span class="action">进入实验</span>
+        </span>
+      </a>
+
+      <a class="experimentLink" href="comparison/">
+        <span class="experimentContent">
+          <span class="experimentNumber">3</span>
+          <h2>灰度偏好比较实验</h2>
+          <p class="description">在上下两个灰度条件中进行偏好选择，完成多轮比较试次。</p>
+          <span class="action">进入实验</span>
+        </span>
+      </a>
+    </section>
+  </main>
+</body>
+</html>

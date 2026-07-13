@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>文本显示</title>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Arial,"Microsoft YaHei",sans-serif;
+}
+
+#screen{
+  width:100vw;
+  height:100vh;
+  box-sizing:border-box;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  background:white;
+}
+
+#text{
+  max-width:900px;
+  margin:0 auto;
+  padding:24px 7vw 80px;
+  box-sizing:border-box;
+  color:black;
+  font-size:28px;
+  line-height:1.6;
+  white-space:pre-line;
+  word-break:break-word;
+  text-align:justify;
+  text-align-last:left;
+}
+
+#setupOverlay{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  box-sizing:border-box;
+  background:white;
+}
+
+#setupBox{
+  width:100%;
+  max-width:420px;
+  padding:22px;
+  box-sizing:border-box;
+  border:1px solid #ccc;
+  border-radius:16px;
+  background:#f7f7f7;
+}
+
+h1{
+  margin:0 0 18px;
+  font-size:22px;
+  text-align:center;
+}
+
+label{
+  display:block;
+  margin:14px 0 6px;
+  font-size:15px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  box-sizing:border-box;
+  border:1px solid #aaa;
+  border-radius:8px;
+  font-size:18px;
+}
+
+button{
+  border:0;
+  border-radius:10px;
+  padding:12px;
+  font-size:16px;
+  background:white;
+}
+
+#materialRow{
+  display:flex;
+  gap:10px;
+}
+
+#materialRow button{
+  flex:1;
+}
+
+.selectedMaterial{
+  background:black;
+  color:white;
+}
+
+#startButton{
+  width:100%;
+  margin-top:20px;
+  background:black;
+  color:white;
+  font-size:18px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="setupOverlay">
+<div id="setupBox">
+
+<h1>显示参数</h1>
+
+<label for="grayInput">灰度值（0–255）</label>
+<input id="grayInput" type="number" min="0" max="255" step="1" value="255"/>
+
+<label for="fontSizeInput">字体大小（px）</label>
+<input id="fontSizeInput" type="number" min="1" step="1" value="28"/>
+
+<label>阅读材料</label>
+
+<div id="materialRow">
+<button id="materialAButton">材料 A</button>
+<button id="materialBButton">材料 B</button>
+</div>
+
+<button id="startButton">开始显示</button>
+
+</div>
+</div>
+
+<main id="screen">
+<div id="text">正在加载文本...</div>
+</main>
+
+<script>
+
+const TEXT_FILES={
+  A:"textA.txt",
+  B:"textB.txt"
+};
+
+let selectedMaterial="A";
+let selectedTextFile=TEXT_FILES.A;
+
+
+const setupOverlay=document.getElementById("setupOverlay");
+const grayInput=document.getElementById("grayInput");
+const fontSizeInput=document.getElementById("fontSizeInput");
+const startButton=document.getElementById("startButton");
+const screen=document.getElementById("screen");
+const text=document.getElementById("text");
+
+const materialAButton=document.getElementById("materialAButton");
+const materialBButton=document.getElementById("materialBButton");
+
+
+async function loadText(){
+
+try{
+
+const response=await fetch(selectedTextFile);
+
+if(!response.ok){
+throw new Error("无法读取文本文件");
+}
+
+text.textContent=await response.text();
+
+}catch(error){
+
+text.textContent=
+"文本加载失败，请确认txt文件与index.html在同一文件夹，并通过服务器打开";
+
+console.error(error);
+
+}
+
+}
+
+
+materialAButton.onclick=function(){
+
+selectedMaterial="A";
+selectedTextFile=TEXT_FILES.A;
+
+materialAButton.classList.add("selectedMaterial");
+materialBButton.classList.remove("selectedMaterial");
+
+};
+
+
+materialBButton.onclick=function(){
+
+selectedMaterial="B";
+selectedTextFile=TEXT_FILES.B;
+
+materialBButton.classList.add("selectedMaterial");
+materialAButton.classList.remove("selectedMaterial");
+
+};
+
+
+materialAButton.classList.add("selectedMaterial");
+
+async function startDisplay(){
+
+const gray=Number(grayInput.value);
+const fontSize=Number(fontSizeInput.value);
+
+if(!Number.isFinite(gray)||gray<0||gray>255){
+alert("灰度值必须在0到255之间");
+return;
+}
+
+if(!Number.isFinite(fontSize)||fontSize<=0){
+alert("请输入有效字体大小");
+return;
+}
+
+
+try{
+
+const root=document.documentElement;
+
+if(root.requestFullscreen){
+await root.requestFullscreen();
+}
+
+}catch(error){
+
+console.log("无法进入全屏：",error);
+
+}
+
+
+const rgb=`rgb(${gray},${gray},${gray})`;
+
+screen.style.background=rgb;
+document.body.style.background=rgb;
+
+text.style.fontSize=`${fontSize}px`;
+
+
+await loadText();
+
+
+setupOverlay.style.display="none";
+
+screen.scrollTop=0;
+
+}
+
+
+startButton.addEventListener(
+"click",
+startDisplay
+);
+
+
+</script>
+
+</body>
+</html>

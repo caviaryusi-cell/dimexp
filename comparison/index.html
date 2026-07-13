@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>灰度偏好比较实验</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: white;
+    }
+
+    :root {
+      --choice-height: 64px;
+    }
+
+    #experimentScreen {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: none;
+      overflow: hidden;
+    }
+
+    #comparisonViewport {
+      min-height: 0;
+      display: grid;
+      height: 100%;
+      grid-template-rows: minmax(0, 1fr) var(--choice-height) minmax(0, 1fr);
+    }
+
+    .grayArea {
+      width: 100%;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      box-sizing: border-box;
+    }
+
+    .comparisonText {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 7vw;
+      box-sizing: border-box;
+      color: black;
+      font-size: 28px;
+      line-height: 1.6;
+      white-space: pre-line;
+      word-break: break-word;
+      text-align: justify;
+      text-align-last: left;
+    }
+
+    #topArea {
+      border-bottom: 1px solid black;
+    }
+
+    #choicePanel {
+      position: relative;
+      z-index: 20;
+      width: 100%;
+      height: var(--choice-height);
+      min-height: var(--choice-height);
+      padding: 8px;
+      box-sizing: border-box;
+      background: rgb(70, 70, 70);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid black;
+    }
+
+    #progress {
+      flex: 0 0 auto;
+      margin: 0;
+      color: white;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    #buttonRow {
+      display: flex;
+      flex: 1;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      min-height: 42px;
+      padding: 7px 8px;
+      border: 0;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.94);
+      color: black;
+      font-size: 16px;
+    }
+
+    button:active {
+      background: rgba(215, 215, 215, 0.96);
+    }
+
+    #setupOverlay,
+    #finishOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      background: white;
+    }
+
+    #finishOverlay {
+      display: none;
+    }
+
+    .dialogBox {
+      width: 100%;
+      max-width: 420px;
+      padding: 22px;
+      box-sizing: border-box;
+      border: 1px solid #cccccc;
+      border-radius: 16px;
+      background: #f7f7f7;
+    }
+
+    .dialogBox h1 {
+      margin: 0 0 18px;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .dialogBox p {
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-size: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #aaaaaa;
+      border-radius: 8px;
+      font-size: 18px;
+    }
+
+    .primaryButton {
+      width: 100%;
+      margin-top: 18px;
+      background: black;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="setupOverlay">
+    <div class="dialogBox">
+      <h1>灰度偏好比较实验</h1>
+
+      <label for="participantInput">用户名</label>
+      <input id="participantInput" type="text" placeholder="请输入用户名" autocomplete="off" />
+
+      <label for="baseGrayInput">基准灰度值（10–182）</label>
+      <input id="baseGrayInput" type="number" min="10" max="182" step="1" value="128" />
+
+      <label for="fontSizeInput">字体大小（px）</label>
+      <input id="fontSizeInput" type="number" min="1" step="1" value="28" />
+
+      <p>实验将比较：基准值 −20%、−10%、0%、+10%、+20%。</p>
+      <button id="startButton" class="primaryButton">开始实验</button>
+    </div>
+  </div>
+
+  <main id="experimentScreen">
+    <div id="comparisonViewport">
+      <div id="topArea" class="grayArea">
+        <div id="topText" class="comparisonText">正在加载文本...</div>
+      </div>
+
+      <div id="choicePanel">
+        <div id="progress">试次 1 / 80</div>
+        <div id="buttonRow">
+          <button id="chooseTopButton">上</button>
+          <button id="chooseBottomButton">下</button>
+        </div>
+      </div>
+
+      <div id="bottomArea" class="grayArea">
+        <div id="bottomText" class="comparisonText">正在加载文本...</div>
+      </div>
+    </div>
+  </main>
+
+  <div id="finishOverlay">
+    <div class="dialogBox">
+      <h1>实验结束</h1>
+      <p>80 个试次已完成，结果已汇总为 10 对灰度比较。</p>
+      <button id="exportButton" class="primaryButton">导出 CSV</button>
+    </div>
+  </div>
+
+  <script>
+    const LEVEL_PERCENT_CHANGES = [-20, -10, 0, 10, 20];
+    const REPEATS_PER_PAIR = 8;
+    const TEXT_FILE = "text.txt";
+
+    const setupOverlay = document.getElementById("setupOverlay");
+    const finishOverlay = document.getElementById("finishOverlay");
+    const experimentScreen = document.getElementById("experimentScreen");
+    const participantInput = document.getElementById("participantInput");
+    const baseGrayInput = document.getElementById("baseGrayInput");
+    const fontSizeInput = document.getElementById("fontSizeInput");
+    const startButton = document.getElementById("startButton");
+    const topArea = document.getElementById("topArea");
+    const bottomArea = document.getElementById("bottomArea");
+    const topText = document.getElementById("topText");
+    const bottomText = document.getElementById("bottomText");
+    const progress = document.getElementById("progress");
+    const chooseTopButton = document.getElementById("chooseTopButton");
+    const chooseBottomButton = document.getElementById("chooseBottomButton");
+    const exportButton = document.getElementById("exportButton");
+
+    let baseGray = 0;
+    let fontSizePx = 0;
+    let participantId = "";
+    let experimentStartTime = "";
+    let trials = [];
+    let currentTrialIndex = 0;
+    let trialRecords = [];
+
+    async function enterFullscreen(){
+      const element=document.documentElement;
+      try{
+        if(element.requestFullscreen){
+          await element.requestFullscreen();
+        }else if(element.webkitRequestFullscreen){
+          element.webkitRequestFullscreen();
+        }else if(element.msRequestFullscreen){
+          element.msRequestFullscreen();
+        }
+      }catch(error){
+        console.log("全屏失败：",error);
+      }
+    }
+
+    function shuffleArray(array) {
+      const result = array.slice();
+
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+
+      return result;
+    }
+
+    function createTimestamp() {
+      const parts = new Intl.DateTimeFormat("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(new Date());
+
+      const value = type => parts.find(part => part.type === type)?.value || "";
+      return ["year", "month", "day", "hour", "minute"].map(value).join("");
+    }
+
+    function createTrials(levels) {
+      const result = [];
+      let pairIndex = 0;
+
+      for (let i = 0; i < levels.length; i++) {
+        for (let j = i + 1; j < levels.length; j++) {
+          pairIndex += 1;
+          const optionA = levels[i];
+          const optionB = levels[j];
+
+          for (let repeat = 0; repeat < REPEATS_PER_PAIR; repeat++) {
+            const aIsTop = repeat < REPEATS_PER_PAIR / 2;
+            result.push({
+              pairIndex,
+              optionA,
+              optionB,
+              repeatIndex: repeat + 1,
+              topGray: aIsTop ? optionA : optionB,
+              bottomGray: aIsTop ? optionB : optionA
+            });
+          }
+        }
+      }
+
+      return shuffleArray(result).map((trial, index) => ({
+        ...trial,
+        trialIndex: index + 1
+      }));
+    }
+
+    function setAreaGray(element, gray) {
+      element.style.background = `rgb(${gray}, ${gray}, ${gray})`;
+    }
+
+    async function loadText() {
+      try {
+        const response = await fetch(TEXT_FILE);
+
+        if (!response.ok) {
+          throw new Error("无法读取文本文件");
+        }
+
+        const content = await response.text();
+        topText.textContent = content;
+        bottomText.textContent = content;
+      } catch (error) {
+        const message =
+          "文本加载失败。请确认 text.txt 与 index.html 位于同一文件夹，并通过本地服务器打开网页。";
+        topText.textContent = message;
+        bottomText.textContent = message;
+        console.error(error);
+      }
+    }
+
+    function showCurrentTrial() {
+      const trial = trials[currentTrialIndex];
+      setAreaGray(topArea, trial.topGray);
+      setAreaGray(bottomArea, trial.bottomGray);
+      progress.textContent = `试次 ${currentTrialIndex + 1} / ${trials.length}`;
+    }
+
+    async function startExperiment() {
+      const participant = participantInput.value.trim();
+      const value = Number(baseGrayInput.value);
+      const fontSize = Number(fontSizeInput.value);
+
+      if (!participant) {
+        alert("请输入用户名");
+        return;
+      }
+
+      if (!Number.isInteger(value) || value < 10 || value > 182) {
+        alert("请输入 10 到 182 之间的整数，确保五个百分比灰度水平有效且不超出 0–255。");
+        return;
+      }
+
+      if (!Number.isFinite(fontSize) || fontSize <= 0) {
+        alert("请输入有效的字体大小");
+        return;
+      }
+
+      participantId = participant;
+      baseGray = value;
+      fontSizePx = fontSize;
+      await enterFullscreen();
+      topText.style.fontSize = `${fontSizePx}px`;
+      bottomText.style.fontSize = `${fontSizePx}px`;
+      experimentStartTime = createTimestamp();
+      const levels = LEVEL_PERCENT_CHANGES.map(percent =>
+        Math.round(baseGray * (1 + percent / 100))
+      );
+      trials = createTrials(levels);
+      currentTrialIndex = 0;
+      trialRecords = [];
+
+      setupOverlay.style.display = "none";
+      experimentScreen.style.display = "grid";
+      showCurrentTrial();
+    }
+
+    function saveChoice(position) {
+      if (currentTrialIndex >= trials.length) {
+        return;
+      }
+
+      const trial = trials[currentTrialIndex];
+      const selectedGray = position === "top" ? trial.topGray : trial.bottomGray;
+      const selectedOption = selectedGray === trial.optionA ? "A" : "B";
+
+      trialRecords.push({
+        trialIndex: trial.trialIndex,
+        pairIndex: trial.pairIndex,
+        repeatIndex: trial.repeatIndex,
+        optionAGray: trial.optionA,
+        optionBGray: trial.optionB,
+        topGray: trial.topGray,
+        bottomGray: trial.bottomGray,
+        selectedPosition: position,
+        selectedOption,
+        selectedGray
+      });
+
+      currentTrialIndex += 1;
+
+      if (currentTrialIndex >= trials.length) {
+        experimentScreen.style.display = "none";
+        finishOverlay.style.display = "flex";
+      } else {
+        showCurrentTrial();
+      }
+    }
+
+    function createSummary() {
+      const summaryMap = new Map();
+
+      trialRecords.forEach(record => {
+        const key = `${record.optionAGray}_${record.optionBGray}`;
+
+        if (!summaryMap.has(key)) {
+          summaryMap.set(key, {
+            optionAGray: record.optionAGray,
+            optionBGray: record.optionBGray,
+            selectedACount: 0,
+            selectedBCount: 0
+          });
+        }
+
+        const summary = summaryMap.get(key);
+        if (record.selectedOption === "A") {
+          summary.selectedACount += 1;
+        } else {
+          summary.selectedBCount += 1;
+        }
+      });
+
+      return Array.from(summaryMap.values()).sort((a, b) =>
+        a.optionAGray - b.optionAGray || a.optionBGray - b.optionBGray
+      );
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+
+    function exportCSV() {
+      const header = [
+        "experimentStartTime",
+        "participantId",
+        "baseGray",
+        "fontSizePx",
+        "textFile",
+        "optionAGray",
+        "optionBGray",
+        "selectedACount",
+        "selectedBCount"
+      ];
+
+      const rows = createSummary().map(summary => [
+        experimentStartTime,
+        participantId,
+        baseGray,
+        fontSizePx,
+        TEXT_FILE,
+        summary.optionAGray,
+        summary.optionBGray,
+        summary.selectedACount,
+        summary.selectedBCount
+      ]);
+
+      const csvContent = [
+        header.join(","),
+        ...rows.map(row => row.map(csvEscape).join(","))
+      ].join("\r\n");
+
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8"
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const safeParticipantId = participantId.replace(/[<>:\"/\\|?*]/g, "_");
+      link.href = url;
+      link.download = `Comparison_${safeParticipantId}_${experimentStartTime}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    startButton.addEventListener("click", startExperiment);
+    chooseTopButton.addEventListener("click", () => saveChoice("top"));
+    chooseBottomButton.addEventListener("click", () => saveChoice("bottom"));
+    exportButton.addEventListener("click", exportCSV);
+    loadText();
+  </script>
+</body>
+</html>
